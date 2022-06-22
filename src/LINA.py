@@ -1,8 +1,4 @@
 from collections import defaultdict
-from distutils.log import Log
-from email.policy import default
-from operator import mod
-import resource
 import numpy as np
 import pulp as pl
 
@@ -10,7 +6,7 @@ from BasicAlg import BasicAlg
 from utils.TopoGenerator import TopoGenerator
 
 
-class GRID(BasicAlg):
+class LINA(BasicAlg):
     def __init__(self, topo: TopoGenerator) -> None:
         super().__init__(topo)
 
@@ -21,33 +17,35 @@ class GRID(BasicAlg):
 
         optimal_results = self._solve_lp(worker_set, switch_set, resources, solver)
 
-        aggregation_node = self._knapsack_based_random_rounding(optimal_results, ps, worker_set, switch_set, resources)
+        return self._knapsack_based_random_rounding(optimal_results, ps, worker_set, switch_set, resources)
 
-        sending_rate = dict()
-        switch = {s: 0 for s in switch_set}
-        count = 0 
+    
+    def cal_ingress_overhead(self, test_set, resources, layer_deployment):
+        overhead = 0
         
-        # for index, w in enumerate(worker_set):
-        #     if aggregation_node[w] != ps:  # aggregate on PS
-        #         if switch[aggregation_node[w]] == 0:
-        #             count += 1
-        #         switch[aggregation_node[w]] += 1
+        for index, size in enumerate(resources['layer_size']):
+            overhead += sum([len(self.topo.get_shortest_path(node, test_set[0])) * size for node in layer_deployment[index]]) 
+        
+        return overhead
 
-        # for w in worker_set:
-        #     if aggregation_node[w] == ps:
-        #         sending_rate[w] = band / len(worker_set)
+    def cal_innetwork_aggregation_overhead(self, test_set, resources, aggregation_policy):
+        aggregation_amount=0
+        for w in test_set[1]:
+            for size, node in zip(resources['layer_size'],aggregation_policy[w]):
+                if node != test_set[0]:
+                    aggregation_amount += size
+        return aggregation_amount
 
-        # for index, s in enumerate(switch_set):
-        #     if switch[s] == 0:
-        #         continue
-        #     tmp_rate = band * switch[s] / len(worker_set)
-        #     for w in worker_set:
-        #         if aggregation_node[w] == s:
-        #             sending_rate[w] = tmp_rate
-        #     sending_rate[s] = tmp_rate
+    def cal_total_overhead(self, test_set, resources, aggregation_policy, layer_deployment):
+        total_overhead=0
+        for w in test_set[1]:
+            for size, node in zip(resources['layer_size'],aggregation_policy[w]):
+                total_overhead += size * len(self.topo.get_shortest_path(w, node))
+        
+        total_overhead+= self.cal_ingress_overhead(test_set, resources, layer_deployment)
 
-        return aggregation_node, sending_rate
-
+        return total_overhead
+        
     def _solve_lp(self, ps, worker_set, switch_set, resources, solver):
 
         lp_problem = pl.LpProblem("LINA", pl.LpMaximize)
@@ -139,10 +137,11 @@ class GRID(BasicAlg):
                 for k in range(knapsack_num):
                     if k == knapsack_num-1: # the last knapsack
                         l_res = np.random.choice([i for i in range(offset,knapsack_element_num+offset+remained_element_num)], p=[x_s[index][i]/knapsack_num for i in range(offset,knapsack_element_num+offset+remained_element_num)])
-                        layer_assigned_node[index].append(l_res)
+                        layer_assigned_node[index].append(switch_set[l_res])
                     else:
                         l_res = np.random.choice([i for i in range(offset,knapsack_element_num+offset)], p=[x_s[index][i]/knapsack_num for i in range(offset,knapsack_element_num+offset+remained_element_num)])
-                        layer_assigned_node[index].append(l_res)
+                        layer_assigned_node[index].append(switch_set[l_res])
+            else: layer_assigned_node[index].append(ps)
         
         print(layer_assigned_node)
 
@@ -160,4 +159,4 @@ class GRID(BasicAlg):
         
         print(aggregation_node)
 
-        return aggregation_node
+        return aggregation_node, layer_assigned_node
