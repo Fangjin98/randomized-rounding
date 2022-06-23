@@ -1,7 +1,8 @@
 import json
 import random
-
+import heapq
 from collections import defaultdict
+import sys
 
 
 def get_link_array(paths: list, topo_dict: dict):
@@ -60,7 +61,44 @@ class TopoGenerator(object):
                     break
 
     def get_shortest_path(self, src, dst):
-        return min([Path(p) for p in self._get_feasible_path(src, dst, max_len=10)],len)
+        distances = {} # Distance from start to node
+        previous = {}  # Previous node in optimal path from source
+        nodes = [] # Priority queue of all nodes in Graph
+
+        # init
+        for node in self.topo_dict.keys():
+            if node == src: # Set root node as distance of 0
+                distances[node] = 0
+                heapq.heappush(nodes, [0, node])
+            else:
+                distances[node] = sys.maxsize
+                heapq.heappush(nodes, [sys.maxsize, node])
+            previous[node] = None
+        
+        while nodes:
+            nearest = heapq.heappop(nodes)[1] 
+            if nearest == dst: 
+                p = []
+                while previous[nearest]: 
+                    p.append(nearest)
+                    nearest = previous[nearest]
+                return Path(p)
+            
+            if distances[nearest] == sys.maxsize:
+                raise RecursionError("Error: path not found.") 
+            
+            for neighbor in self.topo_dict[nearest]:
+                alt = distances[nearest] + self.topo_dict[nearest][neighbor]
+                if alt < distances[neighbor]: 
+                    distances[neighbor] = alt
+                    previous[neighbor] = nearest
+                    for n in nodes:
+                        if n[1] == neighbor:
+                            n[0] = alt
+                            break
+                    heapq.heapify(nodes)
+            
+        raise RecursionError("Error: path not found.") 
 
     def construct_path_set(self, src_set, dst_set, max_len=8):
         path = defaultdict(dict)

@@ -15,7 +15,7 @@ class LINA(BasicAlg):
         worker_set = test_set[1]
         switch_set = test_set[2]
 
-        optimal_results = self._solve_lp(worker_set, switch_set, resources, solver)
+        optimal_results = self._solve_lp(ps, worker_set, switch_set, resources, solver)
 
         return self._knapsack_based_random_rounding(optimal_results, ps, worker_set, switch_set, resources)
 
@@ -96,7 +96,7 @@ class LINA(BasicAlg):
                     lp_problem += y_s[i][j][k] <= x_s[j][k]
 
         for i in range(switch_num):
-            lp_problem += pl.lpSum([x_s[j][i] * LAYER_SIZE[j] for j in range(layer_num)]) <= MEM_SIZE[i]
+            lp_problem += pl.lpSum([x_s[j][i] * LAYER_SIZE[j] for j in range(layer_num)]) <= MEM_SIZE
 
 
         if solver is not None:
@@ -114,7 +114,7 @@ class LINA(BasicAlg):
         return np.asarray([x_ps[i].value() for i in range(worker_num)]), \
                np.asarray([[x_s[i][j].value() for j in range(switch_num)] for i in range(worker_num)]), \
                np.asarray([[y_ps[i][j].value() for j in range(layer_num)] for i in range(worker_num)]), \
-                np.asarray([[[y_s[i][j][k] for k in range(switch_num)] for j in range(layer_num)] for i in range(worker_num)])
+                np.asarray([[[y_s[i][j][k].value() for k in range(switch_num)] for j in range(layer_num)] for i in range(worker_num)])
 
     @staticmethod
     def _knapsack_based_random_rounding(optimal_results, ps, worker_set, switch_set, resources):

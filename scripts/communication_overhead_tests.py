@@ -1,7 +1,12 @@
 from collections import defaultdict
-from email.policy import default
-import random
+import os
+import sys
 import json
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+SRC_DIR = os.path.join(BASE_DIR, '../src')
+print(SRC_DIR)
+sys.path.append(SRC_DIR)
 
 from utils.TopoGenerator import TopoGenerator
 from GRID import GRID
@@ -9,7 +14,7 @@ from ATP import ATP
 from DT import DT
 from LINA import LINA
 
-def worker_num_overhead(algs, topo: TopoGenerator, worker_num_set, switch_num, resources):
+def worker_num_overhead(algs, topo: TopoGenerator, worker_num_set, switch_num, resources,delay_rate=0):
     
     overhead = defaultdict(list)
 
@@ -53,7 +58,7 @@ def worker_num_overhead(algs, topo: TopoGenerator, worker_num_set, switch_num, r
 
 
 if __name__ == "__main__":
-    topo1 = TopoGenerator(json.load(open('../topology/fattree80.json')))
+    topo1 = TopoGenerator(json.load(open(os.path.join(BASE_DIR, '../topology/fattree80.json'))))
     algs=[DT(topo1),ATP(topo1),GRID(topo1),LINA(topo1)]
     worker_num_set = [20 + i * 5 for i in range(4)]  # 20 25 30 35
     switch_num = 5
@@ -62,4 +67,4 @@ if __name__ == "__main__":
         'layer_size' : [15 for i in range(16)] # AlexNet, avg layer size of 15 MB, 16 layers
     }
 
-    overhead=worker_num_overhead(algs, topo1, worker_num_set, switch_num,resources, delay_rate=0)
+    overhead=worker_num_overhead(algs, topo1, worker_num_set, switch_num,resources)
