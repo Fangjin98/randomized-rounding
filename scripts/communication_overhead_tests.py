@@ -22,12 +22,12 @@ def worker_num_overhead(algs, topo: TopoGenerator, worker_num_set, switch_num, r
         test_set, flattern_test_set = topo.generate_test_set(num, switch_num, random_pick=True, seed=10)
         print("Test: \t{} workers.".format(str(num)))
         
-        aggregation_policy, layer_depolyment=algs[3].run(test_set,resources)
-        overhead['ingress']=algs[3].cal_ingress_overhead(test_set, resources, layer_depolyment)
-        overhead['in-network']=algs[3].cal_innetwork_aggregation_overhead(test_set, resources, aggregation_policy)
-        overhead['total']=algs[3].cal_total_overhead(test_set, resources, aggregation_policy, layer_depolyment)
-
+        aggregation_policy, layer_depolyment=algs[3].run(flattern_test_set,resources)
+        overhead['ingress']=algs[3].cal_ingress_overhead(flattern_test_set, resources, layer_depolyment)
+        overhead['in-network']=algs[3].cal_innetwork_aggregation_overhead(flattern_test_set, resources, aggregation_policy)
+        overhead['total']=algs[3].cal_total_overhead(flattern_test_set, resources, aggregation_policy, layer_depolyment)
         
+        print(overhead)
 
     # for alg_result, alg in zip(res, ['GRID', 'ATP', 'SwitchML', 'Greyon']):
     #     print(alg)

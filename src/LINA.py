@@ -76,7 +76,7 @@ class LINA(BasicAlg):
              for i in range(worker_num)]
 
         lp_problem += pl.lpSum(
-            [ pl.lpSum([y_s[i][j][k] for i in range(worker_num)]) - x_s[j][k] * len(self.topo.get_shortest_path(switch_set[k], ps)) * LAYER_SIZE[j] for j in range(layer_num) for k in range(switch_num)]
+            [ (pl.lpSum([y_s[i][j][k] for i in range(worker_num)]) - x_s[j][k]) * len(self.topo.get_shortest_path(switch_set[k], ps)) * LAYER_SIZE[j] for j in range(layer_num) for k in range(switch_num)]
             ) 
 
         for i in range(layer_num):
@@ -111,10 +111,10 @@ class LINA(BasicAlg):
 
         print('objective =', pl.value(lp_problem.objective))
 
-        return np.asarray([x_ps[i].value() for i in range(worker_num)]), \
-               np.asarray([[x_s[i][j].value() for j in range(switch_num)] for i in range(worker_num)]), \
-               np.asarray([[y_ps[i][j].value() for j in range(layer_num)] for i in range(worker_num)]), \
-                np.asarray([[[y_s[i][j][k].value() for k in range(switch_num)] for j in range(layer_num)] for i in range(worker_num)])
+        return np.asarray([x_ps[i].value() for i in range(layer_num)],dtype = int), \
+               np.asarray([[x_s[i][j].value() for j in range(switch_num)] for i in range(layer_num)],dtype = int), \
+               np.asarray([[y_ps[i][j].value() for j in range(layer_num)] for i in range(worker_num)],dtype = int), \
+                np.asarray([[[y_s[i][j][k].value() for k in range(switch_num)] for j in range(layer_num)] for i in range(worker_num)],dtype = int)
 
     @staticmethod
     def _knapsack_based_random_rounding(optimal_results, ps, worker_set, switch_set, resources):
@@ -129,17 +129,17 @@ class LINA(BasicAlg):
         aggregation_node=defaultdict(list)
 
         for index, l in enumerate(LAYER_SIZE):
-            knapsack_num=np.sum(x_s[index])
+            knapsack_num=np.sum(x_s[index], dtype=int)
             if knapsack_num != 0:
-                knapsack_element_num=len(switch_set)/knapsack_num
-                remained_element_num= len(switch_set) % knapsack_num
+                knapsack_element_num=int(len(switch_set)/knapsack_num)
+                remained_element_num= int(len(switch_set) % knapsack_num)
                 offset=0
                 for k in range(knapsack_num):
                     if k == knapsack_num-1: # the last knapsack
                         l_res = np.random.choice([i for i in range(offset,knapsack_element_num+offset+remained_element_num)], p=[x_s[index][i]/knapsack_num for i in range(offset,knapsack_element_num+offset+remained_element_num)])
                         layer_assigned_node[index].append(switch_set[l_res])
                     else:
-                        l_res = np.random.choice([i for i in range(offset,knapsack_element_num+offset)], p=[x_s[index][i]/knapsack_num for i in range(offset,knapsack_element_num+offset+remained_element_num)])
+                        l_res = np.random.choice([i for i in range(offset,knapsack_element_num+offset)], p=[x_s[index][i]/knapsack_num for i in range(offset,knapsack_element_num+offset)])
                         layer_assigned_node[index].append(switch_set[l_res])
             else: layer_assigned_node[index].append(ps)
         
@@ -147,15 +147,15 @@ class LINA(BasicAlg):
 
         for index_i, w in enumerate(worker_set):
             for index_j, l in enumerate(LAYER_SIZE):
-                if layer_assigned_node.count()==0:
-                    aggregation_node[w].append(ps)
-                else:
-                    prob=[]
-                    for s in layer_assigned_node[index_j]:
-                        prob.append[y_s[index_i][index][s]/x_s[index][s]]
-                    prob.append(1-sum(prob))
-                    node=np.random.choice([switch_set[i] for i in layer_assigned_node[index]]+[ps], prob=prob)
-                    aggregation_node[w].append(node)
+                prob=[]
+                for s in layer_assigned_node[index_j]:
+                    if s != ps:
+                        prob.append(y_s[index_i][index_j][switch_set.index(s)]/x_s[index_j][switch_set.index(s)])
+                prob.append(1-sum(prob))
+               
+                aggregation_node[w].append(
+                    np.random.choice([s for s in layer_assigned_node[index_j]]+[ps], p=prob)
+                )
         
         print(aggregation_node)
 
