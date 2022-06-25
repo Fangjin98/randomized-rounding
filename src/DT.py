@@ -22,7 +22,7 @@ class DT(BasicAlg):
 
         for index_i, w in enumerate(worker_set):
             for index_j, l in enumerate(LAYER_SIZE):
-                aggregation_node[w].append( ps )
+                aggregation_node[w].append(ps)
         
         print(aggregation_node)
 

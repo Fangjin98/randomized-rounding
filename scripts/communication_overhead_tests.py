@@ -2,6 +2,7 @@ from collections import defaultdict
 import os
 import sys
 import json
+import pandas as pd
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 SRC_DIR = os.path.join(BASE_DIR, '../src')
@@ -16,50 +17,35 @@ from LINA import LINA
 
 def worker_num_overhead(algs, topo: TopoGenerator, worker_num_set, switch_num, resources,delay_rate=0):
     
-    overhead = defaultdict(list)
+    total_overhead=pd.DataFrame(columns=worker_num_set, index=['Geryon','ATP','ATP+','LINA'])
+    print(total_overhead)
 
     for num in worker_num_set:
         test_set, flattern_test_set = topo.generate_test_set(num, switch_num, random_pick=True, seed=10)
+        results=[]
+
         print("Test: \t{} workers.".format(str(num)))
-        
-        print("----------------LINA---------------")
-        aggregation_policy, layer_depolyment=algs[3].run(flattern_test_set,resources)
-        overhead['ingress']=algs[3].cal_ingress_overhead(flattern_test_set, resources, layer_depolyment)
-        overhead['in-network']=algs[3].cal_innetwork_aggregation_overhead(flattern_test_set, resources, aggregation_policy)
-        overhead['total']=algs[3].cal_total_overhead(flattern_test_set, resources, aggregation_policy, layer_depolyment)
-        print(overhead)
-        
+
         print("----------------Geryon--------------")   
         aggregation_policy,layer_depolyment=algs[0].run(flattern_test_set,resources)
-        print(algs[0].cal_total_overhead(flattern_test_set, resources, aggregation_policy, layer_depolyment))
+        results.append(algs[0].cal_total_overhead(flattern_test_set, resources, aggregation_policy, layer_depolyment))
+        
+        print("-----------------ATP-----------------")
+        aggregation_policy,layer_depolyment=algs[1].run(flattern_test_set,resources,delay_ratio=0.2)
+        results.append(algs[1].cal_total_overhead(flattern_test_set, resources, aggregation_policy, layer_depolyment))
 
-    # for alg_result, alg in zip(res, ['GRID', 'ATP', 'SwitchML', 'Greyon']):
-    #     print(alg)
-    #     for i, suite_result in enumerate(alg_result):
-    #         print("Worker num: {}".format(worker_num[i]))
-    #         total_throughput = 0
-    #         ps_throughput = 0
-    #         agg_throughput = 0
-    #         total_band = 0
-    #         for key in suite_result[1].keys():
-    #             if key[0] == 'h':  # worker
-    #                 total_throughput += suite_result[1][key]
-    #                 if suite_result[0][key][0] == 'v':  # aggregation node is switch
-    #                     agg_throughput += suite_result[1][key]
-    #                     total_band += MODEL_SIZE
-    #                 else:  # aggregation node is the ps
-    #                     ps_throughput += suite_result[1][key]
-    #                     total_band += MODEL_SIZE * 3
+        print("-----------------ATP+Geryon--------------")
+        results.append(0)
+        print("----------------LINA---------------")
+        aggregation_policy, layer_depolyment=algs[3].run(flattern_test_set,resources)
+        results.append(algs[3].cal_total_overhead(flattern_test_set, resources, aggregation_policy, layer_depolyment))
+        
+        total_overhead[num]=results
+        # overhead['ingress']=algs[3].cal_ingress_overhead(flattern_test_set, resources, layer_depolyment)
+        # overhead['in-network']=algs[3].cal_innetwork_aggregation_overhead(flattern_test_set, resources, aggregation_policy)
 
-    #             elif key[0] == 'v':  # switch
-    #                 ps_throughput += suite_result[1][key]
-    #                 total_band += MODEL_SIZE * 2
-
-            # print('Avg worker sending rate: {}'.format(str(total_throughput / worker_num[i])))
-            # print('PS ingress bandwidth: {}'.format(str(ps_throughput)))
-            # print('In-network aggregation throughput: {}'.format(str(agg_throughput)))
-            # print('Total throughput: {}'.format(str(total_band)))
-
+        print(total_overhead)
+        
 
 if __name__ == "__main__":
     topo1 = TopoGenerator(json.load(open(os.path.join(BASE_DIR, '../topology/fattree80.json'))))

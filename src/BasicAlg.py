@@ -11,10 +11,11 @@ class BasicAlg(ABC):
         pass
     
     def cal_ingress_overhead(self, test_set, resources, layer_deployment):
+        ps=test_set[0]
         overhead = 0
         
         for index, size in enumerate(resources['layer_size']):
-            overhead += sum([len(self.topo.get_shortest_path(node, test_set[0])) * size for node in layer_deployment[index]]) 
+            overhead += sum([len(self.topo.get_shortest_path(node, ps)) * size for node in layer_deployment[index]]) 
         
         return overhead
 

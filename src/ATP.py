@@ -1,5 +1,4 @@
 from collections import defaultdict
-from email.policy import default
 import random
 from typing import List
 from BasicAlg import BasicAlg
@@ -10,43 +9,32 @@ class ATP(BasicAlg):
     def __init__(self, topo: TopoGenerator) -> None:
         super().__init__(topo)
 
-    def run(self, test_set, comp, band, **kwargs):
+    def run(self, test_set, resources, **kwargs):
         ps = test_set[0]
         worker_set = test_set[1]
         switch_set = test_set[2]
-        flatten_worker_set = []
-        rate = dict(kwargs['sending_rate'])
 
-        for ww in worker_set:
-            for w in ww:
-                flatten_worker_set.append(w)
+        aggregation_node = defaultdict(list)
+        MEM_SIZE=resources['memory_size']
+        LAYER_SIZE=resources['layer_size']
+        layer_assigned_node=[[] for i in range(len(LAYER_SIZE))]
 
-        tor_switch_set = self._get_tor_switch(ps, worker_set, switch_set)
-        capacity_dict = {
-            switch: val for switch, val in zip(switch_set, comp)
-        }
-        aggregation_node = dict()
+        delayed_worker_num=int(len(worker_set)* kwargs['delay_ratio'])
+        print("No. of delayed workers = {}".format(str(delayed_worker_num)))
+        
+        for w in worker_set[:delayed_worker_num]:
+            for l in LAYER_SIZE:
+                aggregation_node[w].append(ps)
+        
+        for w in worker_set[delayed_worker_num:]:
+            node=self.topo.get_nearest_switch(w,specific_switch_set=switch_set)
+            remained_mem=MEM_SIZE
+            for index_l, l in enumerate(LAYER_SIZE):
+                if remained_mem >= l:
+                    remained_mem-=l
+                    aggregation_node[w].append(node)
+                else:
+                    aggregation_node[w].append(ps)
 
-        for index, w in enumerate(flatten_worker_set):
-            if capacity_dict[tor_switch_set[w]] >= rate[w]:  # aggregate on tier 0
-                capacity_dict[tor_switch_set[w]] -= rate[w]
-                aggregation_node[w] = tor_switch_set[w]
-            elif capacity_dict[tor_switch_set[ps]] >= rate[w]:  # aggregate on tier 1
-                capacity_dict[tor_switch_set[ps]] -= rate[w]
-                aggregation_node[w] = tor_switch_set[ps]
-            else:  # directly aggregate on ps
-                aggregation_node[w] = ps
+        return aggregation_node, layer_assigned_node
 
-        return aggregation_node, rate
-
-    @staticmethod
-    def _get_tor_switch(ps, worker_set, switch_set):
-        tor_switch = defaultdict(dict)
-
-        for index, ww in enumerate(worker_set):
-            for w in ww:
-                tor_switch[w] = switch_set[index]
-
-        tor_switch[ps] = switch_set[0]
-
-        return tor_switch

@@ -99,7 +99,24 @@ class TopoGenerator(object):
                     heapq.heapify(nodes)
             
         raise RecursionError("Error: path not found.") 
-
+    
+    def get_nearest_switch(self, worker, specific_switch_set=None):
+        min_distance=sys.maxsize
+        nearest_switch=None
+        
+        if specific_switch_set==None:
+            specific_switch_set=self.switch_set
+        
+        for s in specific_switch_set:
+            distance=len(self.get_shortest_path(worker, s))
+            if(distance==1):
+                return s
+            else:
+                if(distance< min_distance):
+                    nearest_switch=s
+                    min_distance=distance
+        return nearest_switch
+    
     def construct_path_set(self, src_set, dst_set, max_len=8):
         path = defaultdict(dict)
         for s in src_set:
@@ -133,7 +150,7 @@ class TopoGenerator(object):
         json_str = json.dumps(self.topo_dict, indent=4)
         with open(json_file, 'w') as f:
             f.write(json_str)
-
+    
     def generate_test_set(self, worker_num, switch_num, random_pick=False, seed=None):
         worker_num_per_rack = int(worker_num / switch_num)
         temp_host_set = list(self.host_set)

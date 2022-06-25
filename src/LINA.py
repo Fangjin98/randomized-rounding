@@ -83,8 +83,6 @@ class LINA(BasicAlg):
         else:
             lp_problem.solve()
 
-        print('objective =', pl.value(lp_problem.objective))
-
         return np.asarray([x_ps[i].value() for i in range(layer_num)],dtype = int), \
                np.asarray([[x_s[i][j].value() for j in range(switch_num)] for i in range(layer_num)],dtype = int), \
                np.asarray([[y_ps[i][j].value() for j in range(layer_num)] for i in range(worker_num)],dtype = int), \
@@ -116,8 +114,6 @@ class LINA(BasicAlg):
                         l_res = np.random.choice([i for i in range(offset,knapsack_element_num+offset)], p=[x_s[index][i]/knapsack_num for i in range(offset,knapsack_element_num+offset)])
                         layer_assigned_node[index].append(switch_set[l_res])
             else: layer_assigned_node[index].append(ps)
-        
-        print(layer_assigned_node)
 
         for index_i, w in enumerate(worker_set):
             for index_j, l in enumerate(LAYER_SIZE):
@@ -130,7 +126,5 @@ class LINA(BasicAlg):
                 aggregation_node[w].append(
                     np.random.choice([s for s in layer_assigned_node[index_j]]+[ps], p=prob)
                 )
-        
-        print(aggregation_node)
 
         return aggregation_node, layer_assigned_node
