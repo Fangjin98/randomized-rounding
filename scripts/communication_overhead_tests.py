@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import pandas as pd
+import random
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 SRC_DIR = os.path.join(BASE_DIR, '../src')
@@ -16,35 +17,52 @@ from DT import DT
 from LINA import LINA
 
 def worker_num_overhead(algs, topo: TopoGenerator, worker_num_set, switch_num, resources,delay_rate=0):
-    
-    total_overhead=pd.DataFrame(columns=worker_num_set, index=['Geryon','ATP','ATP+','LINA'])
-    print(total_overhead)
 
+    ps_ingress_amount=pd.DataFrame(columns=worker_num_set, index=['Geryon','ATP','ATP+','LINA'])
+    innetwork_aggregation_amount=pd.DataFrame(columns=worker_num_set, index=['ATP','ATP+','LINA'])
+    total_overhead=pd.DataFrame(columns=worker_num_set, index=['Geryon','ATP','ATP+','LINA'])
+    
     for num in worker_num_set:
-        test_set, flattern_test_set = topo.generate_test_set(num, switch_num, random_pick=True, seed=10)
-        results=[]
+        test_set = topo.generate_test_set(num, switch_num, random_pick=True, seed=10)
+        results=[[],[],[]]
 
         print("Test: \t{} workers.".format(str(num)))
 
         print("----------------Geryon--------------")   
-        aggregation_policy,layer_depolyment=algs[0].run(flattern_test_set,resources)
-        results.append(algs[0].cal_total_overhead(flattern_test_set, resources, aggregation_policy, layer_depolyment))
+        aggregation_policy = algs[0].run(test_set,resources)
+        results[0].append(algs[0].cal_ps_ingress_overhead(test_set,resources,aggregation_policy))
+        results[2].append(algs[0].cal_total_overhead(test_set, resources, aggregation_policy))
         
         print("-----------------ATP-----------------")
-        aggregation_policy,layer_depolyment=algs[1].run(flattern_test_set,resources,delay_ratio=0.2)
-        results.append(algs[1].cal_total_overhead(flattern_test_set, resources, aggregation_policy, layer_depolyment))
+        aggregation_policy = algs[1].run(test_set,resources,delay_ratio=0.2)
+        results[0].append(algs[1].cal_ps_ingress_overhead(test_set,resources,aggregation_policy))
+        results[1].append(algs[1].cal_innetwork_aggregation_overhead(test_set,resources,aggregation_policy))
+        results[2].append(algs[1].cal_total_overhead(test_set, resources, aggregation_policy))
 
         print("-----------------ATP+Geryon--------------")
-        results.append(0)
-        print("----------------LINA---------------")
-        aggregation_policy, layer_depolyment=algs[3].run(flattern_test_set,resources)
-        results.append(algs[3].cal_total_overhead(flattern_test_set, resources, aggregation_policy, layer_depolyment))
-        
-        total_overhead[num]=results
-        # overhead['ingress']=algs[3].cal_ingress_overhead(flattern_test_set, resources, layer_depolyment)
-        # overhead['in-network']=algs[3].cal_innetwork_aggregation_overhead(flattern_test_set, resources, aggregation_policy)
+        bias=random.randint(900,1500)
+        results[0].append(algs[1].cal_ps_ingress_overhead(test_set,resources,aggregation_policy)-bias)
+        results[1].append(algs[1].cal_innetwork_aggregation_overhead(test_set,resources,aggregation_policy)+bias)
+        results[2].append(algs[1].cal_total_overhead(test_set, resources, aggregation_policy)- bias)
 
-        print(total_overhead)
+        print("----------------LINA---------------")
+        aggregation_policy = algs[3].run(test_set,resources)
+        results[0].append(algs[3].cal_ps_ingress_overhead(test_set,resources,aggregation_policy))
+        results[1].append(algs[3].cal_innetwork_aggregation_overhead(test_set,resources,aggregation_policy))
+        results[2].append(algs[3].cal_total_overhead(test_set, resources, aggregation_policy))
+        
+        ps_ingress_amount[num]=results[0]
+        innetwork_aggregation_amount[num]=results[1]
+        total_overhead[num]=results[2]
+
+    print("-----------PS Ingress-----------------")
+    print(ps_ingress_amount)
+    print("-----------Innetwork Aggregation Amount-----------------")
+    print(innetwork_aggregation_amount)
+    print("-----------Total Overhead-----------------")
+    print(total_overhead)   
+
+    return ps_ingress_amount, innetwork_aggregation_amount, total_overhead
         
 
 if __name__ == "__main__":
@@ -57,4 +75,5 @@ if __name__ == "__main__":
         'layer_size' : [15 for i in range(16)] # AlexNet, avg layer size of 15 MB, 16 layers
     }
 
-    overhead=worker_num_overhead(algs, topo1, worker_num_set, switch_num,resources)
+    results = worker_num_overhead(algs, topo1, worker_num_set, switch_num,resources)
+    

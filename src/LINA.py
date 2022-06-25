@@ -127,4 +127,4 @@ class LINA(BasicAlg):
                     np.random.choice([s for s in layer_assigned_node[index_j]]+[ps], p=prob)
                 )
 
-        return aggregation_node, layer_assigned_node
+        return aggregation_node

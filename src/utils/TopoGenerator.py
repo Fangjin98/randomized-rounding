@@ -152,7 +152,6 @@ class TopoGenerator(object):
             f.write(json_str)
     
     def generate_test_set(self, worker_num, switch_num, random_pick=False, seed=None):
-        worker_num_per_rack = int(worker_num / switch_num)
         temp_host_set = list(self.host_set)
         temp_switch_set = list(self.switch_set)
 
@@ -161,24 +160,18 @@ class TopoGenerator(object):
                 random.seed(seed)
             random.shuffle(temp_host_set)
             random.shuffle(temp_switch_set)
-
+        
+        worker_set = []
+        switch_set = []
         ps = temp_host_set[0]
 
-        flatten_worker_set = []
-        switch_set = []
-
+        for i in range(1, worker_num + 1):
+            worker_set.append(temp_host_set[i])
+        
         for i in range(switch_num):
             switch_set.append(temp_switch_set[i])
-
-        for i in range(1, worker_num + 1):
-            flatten_worker_set.append(temp_host_set[i])
-
-        worker_set = [
-            [flatten_worker_set[j * worker_num_per_rack + i] for i in range(worker_num_per_rack)]
-            for j in range(switch_num)
-        ]
-
-        return [ps, worker_set, switch_set], [ps, flatten_worker_set, switch_set]
+            
+        return [ps, worker_set, switch_set]
 
 
 class Path(object):

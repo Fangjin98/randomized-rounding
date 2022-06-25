@@ -17,8 +17,7 @@ class ATP(BasicAlg):
         aggregation_node = defaultdict(list)
         MEM_SIZE=resources['memory_size']
         LAYER_SIZE=resources['layer_size']
-        layer_assigned_node=[[] for i in range(len(LAYER_SIZE))]
-
+        
         delayed_worker_num=int(len(worker_set)* kwargs['delay_ratio'])
         print("No. of delayed workers = {}".format(str(delayed_worker_num)))
         
@@ -36,5 +35,5 @@ class ATP(BasicAlg):
                 else:
                     aggregation_node[w].append(ps)
 
-        return aggregation_node, layer_assigned_node
+        return aggregation_node
 
