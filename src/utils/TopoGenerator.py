@@ -22,10 +22,11 @@ def get_link_array(paths: list, topo_dict: dict):
 
 
 class TopoGenerator(object):
-    def __init__(self, topo_dict=dict()):
+    def __init__(self, topo_dict=dict(), topo_name="Default"):
         self.topo_dict = dict(topo_dict)
         self.host_set = []
         self.switch_set = []
+        self.topo_name=topo_name
 
         for key in topo_dict.keys():
             for value in topo_dict[key]:
@@ -44,7 +45,7 @@ class TopoGenerator(object):
                 self.host_set.append(key)
 
     def __str__(self) -> str:
-        return str(self.topo_dict)
+        return self.topo_name
 
     def add_edge(self, src, dst, weight):
         self.topo_dict[src][dst] = weight
@@ -173,6 +174,59 @@ class TopoGenerator(object):
             
         return [ps, worker_set, switch_set]
 
+class BCubeGenerator(TopoGenerator):
+    """
+    This topology is defined as a recursive structure. A :math:`Bcube_0` is 
+    composed of n hosts connected to an n-port switch. A :math:`Bcube_1` is 
+    composed of n :math:`Bcube_0` connected to n n-port switches. A :math:`Bcube_k` is
+    composed of n :math:`Bcube_{k-1}` connected to :math:`n^k` n-port switches.
+    This topology comprises:
+     * :math:`n^(k+1)` hosts, each of them connected to :math:`k+1` switches
+     * :math:`n*(k+1)` switches, each of them having n ports
+    Parameters
+    ----------
+    k : int
+        The level of Bcube
+    n : int
+        The number of host per :math:`Bcube_0`
+    """
+
+    def __init__(self,k=1, n=4):
+        if not isinstance(n, int) or not isinstance(k, int):
+            raise TypeError('k and n arguments must be of int type')
+        if n < 1:
+            raise ValueError("Invalid n parameter. It should be >= 1")
+        if k < 0:
+            raise ValueError("Invalid k parameter. It should be >= 0")
+
+        self.topo_dict = defaultdict(dict)
+        self.host_set = []
+        self.switch_set = []
+        self.topo_name="BCube"
+
+        host_num = n ** (k + 1)
+        for i in range(host_num):
+            self.host_set.append('h{}'.format(str(i)))
+
+        for level in range(k + 1):
+            sid = 0
+            arg1 = n ** level
+            arg2 = n ** (level + 1)
+            # i is the horizontal position of a switch a specific level
+            for i in range(n ** k):
+                # add switch at given level
+                sw='s{}_{}'.format(level, sid)
+                self.switch_set.append(sw)
+                sid += 1
+                # add links between hosts and switch
+                m = int(i % arg1 + i / arg1 * arg2)
+                for index in range(m, m + arg2, arg1):
+                    try:
+                        self.add_edge(sw, self.host_set[index],1)
+                        self.add_edge(self.host_set[index],sw,1)
+                    except IndexError as e:
+                        print(index)
+                        break
 
 class Path(object):
     def __init__(self, node_list, link_list=None):

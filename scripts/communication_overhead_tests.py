@@ -11,6 +11,7 @@ print(SRC_DIR)
 sys.path.append(SRC_DIR)
 
 from utils.TopoGenerator import TopoGenerator
+from utils.TopoGenerator import BCubeGenerator
 from GRID import GRID
 from ATP import ATP
 from DT import DT
@@ -63,7 +64,7 @@ def worker_num_overhead(algs, topo: TopoGenerator, worker_num_set, switch_num, r
     print("-----------Total Overhead-----------------")
     print(total_overhead)   
 
-    return ps_ingress_amount, innetwork_aggregation_amount, total_overhead
+    return [ps_ingress_amount, innetwork_aggregation_amount, total_overhead]
 
 def delay_ratio_overhead(algs, topo: TopoGenerator, delay_ratio_set, worker_num, switch_num, resources):
     total_overhead=pd.DataFrame(index=delay_ratio_set, columns=['Geryon','ATP','ATP+','LINA'])
@@ -97,9 +98,15 @@ def delay_ratio_overhead(algs, topo: TopoGenerator, delay_ratio_set, worker_num,
 
     return total_overhead
 
+def test_cases(algs, topo: TopoGenerator, worker_num_set, switch_num, resources, delay_ratio_set):
+    results = worker_num_overhead(algs, topo, worker_num_set, switch_num,resources,delay_ratio=0.2)
+    results.append(delay_ratio_overhead(algs, topo, delay_ratio_set, worker_num_set[-1], switch_num, resources)) 
+
+    for index, r in enumerate(results):
+        r.to_csv(os.path.join(BASE_DIR, '../data/topo_{}_metric_{}'.format(str(topo),str(index))))
+
+
 if __name__ == "__main__":
-    topo1 = TopoGenerator(json.load(open(os.path.join(BASE_DIR, '../topology/fattree80.json'))))
-    algs=[DT(topo1),ATP(topo1),GRID(topo1),LINA(topo1)]
     worker_num_set = [20 + i * 5 for i in range(4)]  # 20 25 30 35
     switch_num = 5
     resources={
@@ -107,11 +114,11 @@ if __name__ == "__main__":
         'layer_size' : [15 for i in range(16)] # AlexNet, avg layer size of 15 MB, 16 layers
     }
     delay_ratio_set=[0,0.2,0.4,0.6]
+    
+    bcube_topo=BCubeGenerator(n=6)
+    bcube_algs=[DT(bcube_topo),ATP(bcube_topo),GRID(bcube_topo),LINA(bcube_topo)]
 
-    # results = worker_num_overhead(algs, topo1, worker_num_set, switch_num,resources,delay_ratio=0.2)
+    test_cases(bcube_algs, bcube_topo , worker_num_set, switch_num, resources, delay_ratio_set)
+
+
     
-    # for index, r in enumerate(results):
-    #     r.to_csv(os.path.join(BASE_DIR, '../data/topo_{}_metric_{}'.format('fattree',str(index))))
-    
-    result=delay_ratio_overhead(algs, topo1, delay_ratio_set, worker_num_set[-1], switch_num, resources)
-    result.to_csv(os.path.join(BASE_DIR, '../data/topo_{}_metric_3'.format('fattree')))

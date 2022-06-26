@@ -113,18 +113,16 @@ class LINA(BasicAlg):
                     else:
                         l_res = np.random.choice([i for i in range(offset,knapsack_element_num+offset)], p=[x_s[index][i]/knapsack_num for i in range(offset,knapsack_element_num+offset)])
                         layer_assigned_node[index].append(switch_set[l_res])
-            else: layer_assigned_node[index].append(ps)
 
         for index_i, w in enumerate(worker_set):
             for index_j, l in enumerate(LAYER_SIZE):
                 prob=[]
                 for s in layer_assigned_node[index_j]:
-                    if s != ps:
-                        prob.append(y_s[index_i][index_j][switch_set.index(s)]/x_s[index_j][switch_set.index(s)])
+                    prob.append(y_s[index_i][index_j][switch_set.index(s)]/x_s[index_j][switch_set.index(s)])
                 prob.append(1-sum(prob))
                
                 aggregation_node[w].append(
-                    np.random.choice([s for s in layer_assigned_node[index_j]]+[ps], p=prob)
+                    np.random.choice([s for s in layer_assigned_node[index_j]+[ps]], p=prob)
                 )
 
         return aggregation_node
