@@ -16,7 +16,7 @@ from ATP import ATP
 from DT import DT
 from LINA import LINA
 
-def worker_num_overhead(algs, topo: TopoGenerator, worker_num_set, switch_num, resources,delay_rate=0):
+def worker_num_overhead(algs, topo: TopoGenerator, worker_num_set, switch_num, resources,delay_ratio=0):
 
     ps_ingress_amount=pd.DataFrame(columns=worker_num_set, index=['Geryon','ATP','ATP+','LINA'])
     innetwork_aggregation_amount=pd.DataFrame(columns=worker_num_set, index=['ATP','ATP+','LINA'])
@@ -34,7 +34,7 @@ def worker_num_overhead(algs, topo: TopoGenerator, worker_num_set, switch_num, r
         results[2].append(algs[0].cal_total_overhead(test_set, resources, aggregation_policy))
         
         print("-----------------ATP-----------------")
-        aggregation_policy = algs[1].run(test_set,resources,delay_ratio=0.2)
+        aggregation_policy = algs[1].run(test_set,resources,delay_ratio=delay_ratio)
         results[0].append(algs[1].cal_ps_ingress_overhead(test_set,resources,aggregation_policy))
         results[1].append(algs[1].cal_innetwork_aggregation_overhead(test_set,resources,aggregation_policy))
         results[2].append(algs[1].cal_total_overhead(test_set, resources, aggregation_policy))
@@ -75,5 +75,8 @@ if __name__ == "__main__":
         'layer_size' : [15 for i in range(16)] # AlexNet, avg layer size of 15 MB, 16 layers
     }
 
-    results = worker_num_overhead(algs, topo1, worker_num_set, switch_num,resources)
+    results = worker_num_overhead(algs, topo1, worker_num_set, switch_num,resources,delay_ratio=0.2)
+    
+    for index, r in enumerate(results):
+        r.to_csv(os.path.join(BASE_DIR, '../data/topo_{}_metric_{}'.format('fattree',str(index))))
     
