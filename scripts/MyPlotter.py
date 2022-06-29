@@ -6,7 +6,6 @@ matplotlib.rcParams['pdf.use14corefonts'] = True
 matplotlib.rcParams['text.usetex'] = True
 matplotlib.rcParams['font.family'] = 'Times New Roman'
 
-plt.style.use(['science'])
 
 default_bar_hatches = [ 'xx','oo','\\','--' ]
 default_bar_colors = [ '#ffb6b9', '#a1a499', '#fff1ac', '#50C1E9' ]
