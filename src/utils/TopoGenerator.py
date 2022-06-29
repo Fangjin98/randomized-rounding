@@ -1,3 +1,4 @@
+from graphlib import TopologicalSorter
 import json
 import random
 import heapq
@@ -22,11 +23,12 @@ def get_link_array(paths: list, topo_dict: dict):
 
 
 class TopoGenerator(object):
-    def __init__(self, topo_dict=dict(), topo_name="Default"):
+
+    def __init__(self, topo_dict=dict(), topo_title = None):
         self.topo_dict = dict(topo_dict)
         self.host_set = []
         self.switch_set = []
-        self.topo_name=topo_name
+        self.title= topo_title if topo_title is not None else "default"
 
         for key in topo_dict.keys():
             for value in topo_dict[key]:
@@ -45,7 +47,7 @@ class TopoGenerator(object):
                 self.host_set.append(key)
 
     def __str__(self) -> str:
-        return self.topo_name
+        return type(self).__name__
 
     def add_edge(self, src, dst, weight):
         self.topo_dict[src][dst] = weight
@@ -185,8 +187,9 @@ class BCubeGenerator(TopoGenerator):
      * :math:`n*(k+1)` switches, each of them having n ports
     Parameters
     ----------
-    k : int
-        The level of Bcube
+    k : int 
+    The level of Bcube
+
     n : int
         The number of host per :math:`Bcube_0`
     """
@@ -200,13 +203,8 @@ class BCubeGenerator(TopoGenerator):
             raise ValueError("Invalid k parameter. It should be >= 0")
 
         self.topo_dict = defaultdict(dict)
-        self.host_set = []
+        self.host_set = ['h'+str(i) for i in range(n ** (k + 1))]
         self.switch_set = []
-        self.topo_name="BCube"
-
-        host_num = n ** (k + 1)
-        for i in range(host_num):
-            self.host_set.append('h{}'.format(str(i)))
 
         for level in range(k + 1):
             sid = 0
@@ -227,6 +225,45 @@ class BCubeGenerator(TopoGenerator):
                     except IndexError as e:
                         print(index)
                         break
+
+class LeafSpineGenerator(TopoGenerator):
+    """
+        spine_num: number of spine switches
+        leaf_num: number of leaf switches
+        host_num: number of hosts per leaf switch
+    """
+
+    def __init__(self,spine_num, leaf_num, host_num, topo_title=None):
+        if not isinstance(spine_num, int) or not isinstance(leaf_num, int) or not isinstance(host_num, int):
+            raise TypeError('arguments must be of int type')
+        if spine_num < 1:
+            raise ValueError("Invalid spine_num parameter. It should be >= 1.")
+        if leaf_num < 1:
+            raise ValueError("Invalid leaf_num parameter. It should be >= 1.")
+        if host_num < 1:
+            raise ValueError("Invalid host_num parameter. It should be >= 1.")
+        
+        self.title=topo_title if topo_title is not None else 'leafspine'
+        self.topo_dict = defaultdict(dict)
+        self.host_set = []
+        spine_switches=['s'+str(i) for i in range(spine_num)]
+        leaf_switches=['s'+str(i) for i in range(spine_num, spine_num+leaf_num)]
+        self.switch_set = spine_switches+leaf_switches
+
+        for spine in spine_switches:
+            for leaf in leaf_switches:
+                self.add_edge(spine, leaf, 1)
+                self.add_edge(leaf, spine, 1)
+        
+        count=0
+        for leaf in leaf_switches:
+            for num in range(host_num):
+                host = 'h{}'+str(count)
+                count+=1
+                self.host_set.append(host)
+                self.add_edge(host, leaf, 1)
+                self.add_edge(leaf, host, 1)
+        
 
 class Path(object):
     def __init__(self, node_list, link_list=None):
