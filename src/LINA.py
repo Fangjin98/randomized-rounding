@@ -88,8 +88,8 @@ class LINA(BasicAlg):
                np.asarray([[y_ps[i][j].value() for j in range(layer_num)] for i in range(worker_num)],dtype = int), \
                 np.asarray([[[y_s[i][j][k].value() for k in range(switch_num)] for j in range(layer_num)] for i in range(worker_num)],dtype = int)
 
-    @staticmethod
-    def _knapsack_based_random_rounding(optimal_results, ps, worker_set, switch_set, resources):
+    @classmethod
+    def _knapsack_based_random_rounding(cls, optimal_results, ps, worker_set, switch_set, resources):
         x_ps = optimal_results[0]
         x_s = optimal_results[1]
         y_ps=optimal_results[2]
@@ -103,16 +103,13 @@ class LINA(BasicAlg):
         for index, l in enumerate(LAYER_SIZE):
             knapsack_num=np.sum(x_s[index], dtype=int)
             if knapsack_num != 0:
-                knapsack_element_num=int(len(switch_set)/knapsack_num)
-                remained_element_num= int(len(switch_set) % knapsack_num)
-                offset=0
-                for k in range(knapsack_num):
-                    if k == knapsack_num-1: # the last knapsack
-                        l_res = np.random.choice([i for i in range(offset,knapsack_element_num+offset+remained_element_num)], p=[x_s[index][i]/knapsack_num for i in range(offset,knapsack_element_num+offset+remained_element_num)])
-                        layer_assigned_node[index].append(switch_set[l_res])
-                    else:
-                        l_res = np.random.choice([i for i in range(offset,knapsack_element_num+offset)], p=[x_s[index][i]/knapsack_num for i in range(offset,knapsack_element_num+offset)])
-                        layer_assigned_node[index].append(switch_set[l_res])
+                index_knapsacks, value_knapsacks=cls.min_max_sum_knapsacks(x_s[index],knapsack_num)
+                for ik, vk in zip(index_knapsacks, value_knapsacks):
+                    knapsack_sum=sum(vk)
+                    l_res = np.random.choice(
+                        ik, 
+                        p=[x_s[index][i]/knapsack_sum for i in ik])
+                    layer_assigned_node[index].append(switch_set[l_res])
 
         for index_i, w in enumerate(worker_set):
             for index_j, l in enumerate(LAYER_SIZE):
@@ -126,3 +123,23 @@ class LINA(BasicAlg):
                 )
 
         return aggregation_node
+
+
+    @classmethod
+    def min_max_sum_knapsacks(cls, element_list, knapsack_num):
+
+        def knapsack_sum(knapsack):
+            if knapsack == []:
+                return 0
+            else: return sum(knapsack)
+        
+        element_index_knapsacks=[[] for i in range(knapsack_num)]
+        element_value_knapsacks=[[] for i in range(knapsack_num)]
+        
+        for index, element in enumerate(element_list):
+            knapsack = min(element_value_knapsacks, key=knapsack_sum)
+            knapsack.append(element)
+            knapsack_index=element_value_knapsacks.index(knapsack)
+            element_index_knapsacks[knapsack_index].append(index)
+        
+        return element_index_knapsacks, element_value_knapsacks

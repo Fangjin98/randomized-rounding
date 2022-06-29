@@ -29,13 +29,16 @@ class BasicAlg(ABC):
     def cal_ps_ingress_overhead(self,test_set,resources,aggregation_policy):
         ingress_overhead=0
         ps=test_set[0]
+        layer_deployment=[ set() for i in range(len(resources['layer_size']))]
         # non-aggregated traffic, ie, worker to ps
         for w in test_set[1]:
             for size, node in zip(resources['layer_size'],aggregation_policy[w]):
                 if node == ps:
-                    ingress_overhead += size * len(self.topo.get_shortest_path(w, node))
-        
-        ingress_overhead+= self._cal_aggregated_overhead(test_set, resources, aggregation_policy)
+                    ingress_overhead += size
+                else: layer_deployment[resources['layer_size'].index(size)].add(node)
+                    
+        for index, size in enumerate(resources['layer_size']):
+            ingress_overhead += sum([ size for node in layer_deployment[index]]) 
 
         return ingress_overhead
         
@@ -46,6 +49,7 @@ class BasicAlg(ABC):
             for size, node in zip(resources['layer_size'],aggregation_policy[w]):
                 if node != ps:
                     aggregation_amount += size
+        
         return aggregation_amount
 
     def cal_total_overhead(self, test_set, resources, aggregation_policy):
